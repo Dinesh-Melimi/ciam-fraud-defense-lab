@@ -9,7 +9,13 @@ def main():
     ap = argparse.ArgumentParser(description="CIAM & fraud defense lab")
     ap.add_argument("--db", default="fraudlab.db")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--live", action="store_true", help="stream traffic and detections in real time")
+    ap.add_argument("--seconds", type=int, default=60)
     a = ap.parse_args()
+    if a.live:
+        from .live import run
+        run(seconds=a.seconds)
+        return
     con = build(a.db)
     findings = run_all(con)
     bl = Blocklist()

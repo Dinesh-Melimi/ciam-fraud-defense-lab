@@ -24,6 +24,13 @@ sqlite3 fraudlab.db < sql/investigations.sql # analyst SQL queries
 python -m pytest -q
 ```
 
+## Live demo
+- **Web dashboard:** open `docs/index.html` in a browser, or view it on GitHub Pages at
+  `https://dinesh-melimi.github.io/ciam-fraud-defense-lab/`. Click **Launch credential stuffing** or
+  **Launch card testing** and watch detections, challenges, and blocklisting happen in real time.
+- **Terminal:** `PYTHONPATH=src python -m fraudlab --live --seconds 90` streams events with color-coded
+  ALLOW / CHALLENGE / BLOCK decisions and alerts.
+
 ## Design choices
 - **Device + behavior over IP**: attackers rotate residential IPs, so velocity keys on device fingerprint and ASN.
 - **Challenge before block**: medium risk gets step-up MFA / 3-D Secure / CAPTCHA to protect real customers.

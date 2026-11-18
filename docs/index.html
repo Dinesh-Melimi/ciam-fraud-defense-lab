@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CIAM &amp; Fraud Defense Lab — Live Monitor</title>
+<style>
+:root{--bg:#0f1420;--card:#171e2e;--fg:#e6e9ef;--mut:#8a93a6;--g:#3ecf8e;--y:#f5c451;--r:#ff5d5d;--b:#5aa9ff}
+*{box-sizing:border-box}body{margin:0;font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg)}
+header{padding:18px 20px;border-bottom:1px solid #222b3d;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-size:18px;margin:0}small{color:var(--mut)}
+.wrap{padding:16px 20px;display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.k{background:var(--card);border-radius:10px;padding:14px}.k b{display:block;font-size:26px}.k span{color:var(--mut);font-size:12px}
+.main{display:grid;grid-template-columns:2fr 1fr;gap:14px;padding:0 20px 20px}@media(max-width:800px){.main{grid-template-columns:1fr}}
+.panel{background:var(--card);border-radius:10px;padding:14px;height:460px;overflow:auto}
+.panel h2{font-size:13px;color:var(--mut);margin:0 0 10px;text-transform:uppercase;letter-spacing:.06em}
+.row{font:12px ui-monospace,Menlo,monospace;padding:3px 0;border-bottom:1px solid #1f2738;white-space:nowrap}
+.ALLOW{color:var(--g)}.CHALLENGE{color:var(--y)}.BLOCK,.BLOCKED{color:var(--r)}
+.alert{background:#2a1520;border-left:3px solid var(--r);padding:8px;border-radius:6px;margin-bottom:8px;font-size:12px}
+button{background:var(--b);color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600}
+button.sec{background:#2a3347}
+</style></head><body>
+<header><div><h1>CIAM &amp; Fraud Defense Lab — Live Monitor</h1><small>Simulated customer login &amp; checkout traffic · velocity detections · risk-based decisions</small></div>
+<div><button id="stuff">Launch credential stuffing</button> <button id="card">Launch card testing</button> <button class="sec" id="pause">Pause</button></div></header>
+<div class="wrap">
+<div class="k"><b id="ev">0</b><span>Events</span></div><div class="k"><b id="al" class="ALLOW">0</b><span>Allowed</span></div>
+<div class="k"><b id="ch" class="CHALLENGE">0</b><span>Challenged (MFA / 3DS)</span></div><div class="k"><b id="bk" class="BLOCK">0</b><span>Blocked</span></div>
+<div class="k"><b id="bl">0</b><span>Devices on blocklist</span></div></div>
+<div class="main"><div class="panel"><h2>Live event stream</h2><div id="log"></div></div>
+<div class="panel"><h2>Alerts</h2><div id="alerts"><small>No alerts yet. Launch an attack to see detection.</small></div></div></div>
+<script>
+const W={new_device:25,risky_asn:30,foreign_country:15,breached_password:40,velocity_hit:35};
+const S={ev:0,ALLOW:0,CHALLENGE:0,BLOCK:0},acct={},cards={},block=new Map();let mode=null,until=0,paused=false;
+const h=s=>{let x=0;for(const c of s)x=(x*31+c.charCodeAt(0))>>>0;return x.toString(16).padStart(8,'0')};
+const pick=a=>a[Math.floor(Math.random()*a.length)];const users=[...Array(300)].map((_,i)=>'user'+i);
+function score(sig){let s=0,r=[];for(const k in sig)if(sig[k]){s+=W[k];r.push(k)}s=Math.min(s,100);return{s,d:s>=70?'BLOCK':s>=35?'CHALLENGE':'ALLOW',r}}
+function row(cls,txt){const d=document.createElement('div');d.className='row '+cls;d.textContent=txt;const L=document.getElementById('log');L.prepend(d);if(L.children.length>300)L.lastChild.remove()}
+function alertBox(t){const A=document.getElementById('alerts');if(A.querySelector('small'))A.innerHTML='';const d=document.createElement('div');d.className='alert';d.textContent=new Date().toLocaleTimeString()+' — '+t;A.prepend(d)}
+function tick(){if(paused)return;if(mode&&Date.now()>until)mode=null;let dev,u,kind,nd=Math.random()<.05,asn=false;
+ if(mode==='stuff'){dev=h('bot'+Math.floor(Math.random()*3));u=pick(users);kind='login';nd=true;asn=true}
+ else if(mode==='card'){dev=h('tester');u='guest';kind='checkout';nd=true}
+ else{u=pick(users);dev=h('dev'+u);kind=Math.random()<.7?'login':'checkout'}
+ S.ev++;const t=new Date().toLocaleTimeString();
+ if(block.has(dev)&&block.get(dev)>Date.now()){S.BLOCK++;row('BLOCKED',`${t}  BLOCKED    ${kind.padEnd(8)} device=${dev}  (on blocklist)`);return draw()}
+ let vel;if(kind==='login'){(acct[dev]=acct[dev]||new Set).add(u);vel=acct[dev].size>=20}else{(cards[dev]=cards[dev]||new Set).add(Math.random());vel=cards[dev].size>=5}
+ const r=score({new_device:nd,risky_asn:asn,velocity_hit:vel});S[r.d]++;
+ row(r.d,`${t}  ${r.d.padEnd(10)} ${kind.padEnd(8)} user=${u.padEnd(8)} device=${dev} score=${String(r.s).padStart(3)} ${r.r.join(',')}`);
+ if(vel&&!block.has(dev)){block.set(dev,Date.now()+864e5);const n=kind==='login'?acct[dev].size:cards[dev].size;
+  alertBox(`${kind==='login'?'CREDENTIAL STUFFING':'CARD TESTING'} from device ${dev}: ${n} ${kind==='login'?'accounts':'cards'} → blocklisted (24h TTL)`)}
+ draw()}
+function draw(){ev.textContent=S.ev;al.textContent=S.ALLOW;ch.textContent=S.CHALLENGE;bk.textContent=S.BLOCK;bl.textContent=block.size}
+stuff.onclick=()=>{mode='stuff';until=Date.now()+8000};card.onclick=()=>{mode='card';until=Date.now()+6000};
+pause.onclick=()=>{paused=!paused;pause.textContent=paused?'Resume':'Pause'};setInterval(tick,120);
+</script></body></html>
