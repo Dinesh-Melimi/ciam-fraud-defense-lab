@@ -31,6 +31,15 @@ python -m pytest -q
 - **Terminal:** `PYTHONPATH=src python -m fraudlab --live --seconds 90` streams events with color-coded
   ALLOW / CHALLENGE / BLOCK decisions and alerts.
 
+## Interactive demo app
+`docs/app/` is a working customer sign-in app plus a live Security Console (no server needed):
+- **Sign in** (`docs/app/index.html`): risk-scored login, step-up MFA for new devices or breached passwords,
+  lockout after 10 failures (PCI DSS 8.3.4), step-up before email change, 3-D Secure on add-card.
+- **Security Console** (`docs/app/soc.html`): every decision streams in live; simulate credential stuffing
+  or brute force and watch velocity detection blocklist the attacker.
+
+Hosted: `https://dinesh-melimi.github.io/ciam-fraud-defense-lab/app/`
+
 ## Design choices
 - **Device + behavior over IP**: attackers rotate residential IPs, so velocity keys on device fingerprint and ASN.
 - **Challenge before block**: medium risk gets step-up MFA / 3-D Secure / CAPTCHA to protect real customers.

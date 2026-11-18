@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Security Console — CIAM Lab</title>
+<style>
+:root{--bg:#0f1420;--card:#171e2e;--fg:#e6e9ef;--mut:#8a93a6;--g:#3ecf8e;--y:#f5c451;--r:#ff5d5d;--b:#5aa9ff}
+*{box-sizing:border-box}body{margin:0;font:14px/1.4 system-ui,sans-serif;background:var(--bg);color:var(--fg)}
+header{padding:16px 20px;border-bottom:1px solid #222b3d;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center}
+h1{font-size:18px;margin:0}small{color:var(--mut)}button{background:var(--b);color:#fff;border:0;border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:600;margin:2px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;padding:16px 20px}.k div{background:var(--card);border-radius:10px;padding:12px}.k b{display:block;font-size:24px}.k span{color:var(--mut);font-size:12px}
+.main{display:grid;grid-template-columns:2fr 1fr;gap:12px;padding:0 20px 20px}@media(max-width:800px){.main{grid-template-columns:1fr}}
+.p{background:var(--card);border-radius:10px;padding:12px;height:470px;overflow:auto}.p h2{font-size:12px;color:var(--mut);text-transform:uppercase;margin:0 0 8px}
+.r{font:12px ui-monospace,monospace;padding:3px 0;border-bottom:1px solid #1f2738;white-space:nowrap}
+.ALLOW,.PASS{color:var(--g)}.CHALLENGE{color:var(--y)}.BLOCK,.FAIL{color:var(--r)}
+.a{background:#2a1520;border-left:3px solid var(--r);padding:8px;border-radius:6px;margin-bottom:8px;font-size:12px}
+</style><script src="engine.js"></script></head><body>
+<header><div><h1>Security Console</h1><small>Live CIAM decisions · velocity detection · blocklist</small></div>
+<div><button id="cs">Simulate credential stuffing</button><button id="bf">Simulate brute force on alex</button><button id="rs" style="background:#2a3347">Reset</button></div></header>
+<div class="k"><div><b id="n">0</b><span>Events</span></div><div><b id="al" class="ALLOW">0</b><span>Allowed</span></div><div><b id="ch" class="CHALLENGE">0</b><span>Challenged</span></div>
+<div><b id="fl" class="FAIL">0</b><span>Failed / blocked</span></div><div><b id="bk">0</b><span>Devices blocklisted</span></div></div>
+<div class="main"><div class="p"><h2>Live events</h2><div id="log"></div></div><div class="p"><h2>Alerts</h2><div id="alerts"></div></div></div>
+<script>
+const S={n:0,ALLOW:0,CHALLENGE:0,bad:0},vel={},blk=new Set();
+function add(e){if(e.kind==='reset'){location.reload();return}
+ if(e.kind==='alert'){const d=document.createElement('div');d.className='a';d.textContent=e.ts+' — '+e.text;alerts.prepend(d);return}
+ S.n++;if(e.decision==='ALLOW'||e.decision==='PASS')S.ALLOW++;else if(e.decision==='CHALLENGE')S.CHALLENGE++;else S.bad++;
+ const d=document.createElement('div');d.className='r '+e.decision;
+ d.textContent=`${e.ts}  ${(e.decision||'').padEnd(9)} ${(e.kind||'').padEnd(8)} user=${(e.user||'').padEnd(16)} device=${e.device||''} ${e.score!=null?'score='+e.score:''} ${(e.reasons||[]).join(', ')}`;
+ log.prepend(d);if(log.children.length>400)log.lastChild.remove();
+ if(e.kind==='login'&&e.device){(vel[e.device]=vel[e.device]||new Set).add(e.user);
+  if(vel[e.device].size>=15&&!blk.has(e.device)){blk.add(e.device);add({kind:'alert',ts:e.ts,text:`CREDENTIAL STUFFING: device ${e.device} tried ${vel[e.device].size} accounts → blocklisted 24h`})}}
+ n.textContent=S.n;al.textContent=S.ALLOW;ch.textContent=S.CHALLENGE;fl.textContent=S.bad;bk.textContent=blk.size}
+ld("lab.log",[]).slice().reverse().forEach(add);BUS.onmessage=m=>add(m.data);const _emit=emit;emit=function(e){_emit(e);add(e)};
+cs.onclick=()=>{let i=0;const bot='bot-'+Math.random().toString(16).slice(2,8);const t=setInterval(()=>{
+  const u=`victim${Math.floor(Math.random()*500)}@demo.com`;
+  if(blk.has(bot)){const e={kind:'login',user:u,device:bot,decision:'BLOCK',reasons:['device_blocklisted'],score:100,ts:new Date().toLocaleTimeString()};add(e)}
+  else login(u,'Summer2024!',{device:bot,risky:true,newDevice:true});
+  if(++i>40)clearInterval(t)},120)};
+bf.onclick=()=>{let i=0;const t=setInterval(()=>{login('alex@demo.com','guess'+i,{device:'bot-brute'});if(++i>=11)clearInterval(t)},200)};
+rs.onclick=()=>{resetLab();location.reload()};
+</script></body></html>

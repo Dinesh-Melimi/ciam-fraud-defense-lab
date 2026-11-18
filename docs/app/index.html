@@ -1,0 +1,52 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FairwayPlay Demo — Sign in</title>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--fg:#1b2330;--mut:#667085;--acc:#1f7a4d;--warn:#b54708;--bad:#c4320a}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1420;--card:#171e2e;--fg:#e6e9ef;--mut:#8a93a6}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg);display:grid;place-items:center;min-height:100vh;padding:16px}
+.card{background:var(--card);width:100%;max-width:400px;border-radius:14px;padding:28px;box-shadow:0 6px 30px #0002}
+h1{margin:0 0 4px;font-size:22px}p.m{color:var(--mut);margin:0 0 18px;font-size:13px}
+label{font-size:13px;color:var(--mut)}input{width:100%;padding:11px;border:1px solid #8884;border-radius:8px;margin:4px 0 12px;font-size:15px;background:transparent;color:var(--fg)}
+button{width:100%;padding:11px;border:0;border-radius:8px;background:var(--acc);color:#fff;font-weight:600;font-size:15px;cursor:pointer}
+.msg{padding:10px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none}.msg.show{display:block}
+.w{background:#fef0c7;color:var(--warn)}.e{background:#fee4e2;color:var(--bad)}.ok{background:#d1fadf;color:var(--acc)}
+.hint{font-size:12px;color:var(--mut);margin-top:16px;border-top:1px solid #8883;padding-top:12px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #8883}
+.big{font-size:30px;font-weight:700;color:var(--acc)}a{color:var(--acc)}
+.sec{background:#2a3347;margin-top:8px}
+</style><script src="engine.js"></script></head><body><div class="card" id="v"></div>
+<script>
+const v=document.getElementById('v');let pending=null,stepFor=null;
+function msg(cls,t){return `<div class="msg show ${cls}">${t}</div>`}
+function viewLogin(note=''){v.innerHTML=`<h1>FairwayPlay</h1><p class="m">Sign in to book bays and use your rewards</p>${note}
+<label>Email</label><input id="u" autocomplete="username"><label>Password</label><input id="p" type="password" autocomplete="current-password">
+<button id="go">Sign in</button>
+<div class="hint">Demo accounts:<br>alex@demo.com / Fairway#2026<br>sam@demo.com / Summer2024! <i>(breached password)</i><br><br>
+Open the <a href="soc.html" target="_blank">Security Console</a> in another tab to watch decisions live. · <a href="#" id="rst">Reset demo</a></div>`;
+ go.onclick=()=>{const r=login(u.value,p.value);
+  if(r.decision==='LOCKED')return viewLogin(msg('e','Account locked after too many failed attempts. Reset via support.'));
+  if(r.decision==='FAIL')return viewLogin(msg('e',`Incorrect email or password. ${r.remaining} attempts left before lockout.`));
+  if(r.decision==='BLOCK')return viewLogin(msg('e','Sign-in blocked due to high risk. Please contact support.'));
+  pending=u.value.toLowerCase().trim();
+  if(r.decision==='CHALLENGE')return viewMfa(r.reasons);
+  done(pending)};
+ rst.onclick=e=>{e.preventDefault();resetLab();viewLogin(msg('ok','Demo reset.'))}}
+function viewMfa(reasons,purpose='sign in'){const code=makeCode();v.innerHTML=`<h1>Verify it's you</h1>
+<p class="m">We noticed something new (${reasons.join(', ')}). Enter the 6-digit code from your authenticator to ${purpose}.</p>
+${msg('w','Demo authenticator code: <b>'+code+'</b>')}<label>Code</label><input id="otp" inputmode="numeric" maxlength="6"><button id="ok">Verify</button>`;
+ ok.onclick=()=>{if(!checkCode(document.getElementById('otp').value.trim())){emit({kind:'mfa',user:pending,device:deviceId(),decision:'FAIL',reasons:['wrong_code'],score:0});return viewMfa(reasons,purpose)}
+  emit({kind:'mfa',user:pending,device:deviceId(),decision:'PASS',reasons:['mfa_verified'],score:0});
+  if(stepFor){const f=stepFor;stepFor=null;return f()} trust(pending);done(pending)}}
+function done(u){sessionStorage.setItem('user',u);account()}
+function account(note=''){const u=sessionStorage.getItem('user');if(!u)return viewLogin();const a=USERS[u];
+ v.innerHTML=`<h1>Hi ${a.name}</h1><p class="m">Signed in as ${a.email}</p>${note}
+<div class="row"><span>Rewards points</span><span class="big">${a.points}</span></div>
+<div class="row"><span>Email</span><span>${a.email}</span></div>
+<button id="ce" style="margin-top:16px">Change email</button><button id="ac" class="sec">Add payment card</button><button id="lo" class="sec">Sign out</button>`;
+ ce.onclick=()=>{pending=u;stepFor=()=>{emit({kind:'change',user:u,device:deviceId(),decision:'ALLOW',reasons:['email_change_after_step_up'],score:0});
+   emit({kind:'alert',text:`Email change on ${u} — old address notified, rewards redemption held 24h`});account(msg('ok','Email change verified. We notified your old address.'))};
+   emit({kind:'stepup',user:u,device:deviceId(),decision:'CHALLENGE',reasons:['sensitive_action:change_email'],score:40});viewMfa(['sensitive account change'],'change your email')};
+ ac.onclick=()=>{emit({kind:'checkout',user:u,device:deviceId(),decision:'CHALLENGE',reasons:['add_card','3-D Secure'],score:40});account(msg('w','Card added after 3-D Secure verification (card stored as a token, never the full number).'))};
+ lo.onclick=()=>{sessionStorage.removeItem('user');viewLogin(msg('ok','Signed out.'))}}
+sessionStorage.getItem('user')?account():viewLogin();
+</script></body></html>
