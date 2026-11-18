@@ -34,7 +34,7 @@ function score(sig){let s=0,r=[];for(const k in sig)if(sig[k]){s+=W[k];r.push(k)
 function row(cls,txt){const d=document.createElement('div');d.className='row '+cls;d.textContent=txt;const L=document.getElementById('log');L.prepend(d);if(L.children.length>300)L.lastChild.remove()}
 function alertBox(t){const A=document.getElementById('alerts');if(A.querySelector('small'))A.innerHTML='';const d=document.createElement('div');d.className='alert';d.textContent=new Date().toLocaleTimeString()+' — '+t;A.prepend(d)}
 function tick(){if(paused)return;if(mode&&Date.now()>until)mode=null;let dev,u,kind,nd=Math.random()<.05,asn=false;
- if(mode==='stuff'){dev=h('bot'+Math.floor(Math.random()*3));u=pick(users);kind='login';nd=true;asn=true}
+ if(mode==='stuff'){dev=h('bot'+Math.floor(Math.random()*2));u=pick(users);kind='login';nd=true;asn=true}
  else if(mode==='card'){dev=h('tester');u='guest';kind='checkout';nd=true}
  else{u=pick(users);dev=h('dev'+u);kind=Math.random()<.7?'login':'checkout'}
  S.ev++;const t=new Date().toLocaleTimeString();
@@ -46,6 +46,6 @@ function tick(){if(paused)return;if(mode&&Date.now()>until)mode=null;let dev,u,k
   alertBox(`${kind==='login'?'CREDENTIAL STUFFING':'CARD TESTING'} from device ${dev}: ${n} ${kind==='login'?'accounts':'cards'} → blocklisted (24h TTL)`)}
  draw()}
 function draw(){ev.textContent=S.ev;al.textContent=S.ALLOW;ch.textContent=S.CHALLENGE;bk.textContent=S.BLOCK;bl.textContent=block.size}
-stuff.onclick=()=>{mode='stuff';until=Date.now()+8000};card.onclick=()=>{mode='card';until=Date.now()+6000};
+stuff.onclick=()=>{mode='stuff';until=Date.now()+10000};card.onclick=()=>{mode='card';until=Date.now()+6000};
 pause.onclick=()=>{paused=!paused;pause.textContent=paused?'Resume':'Pause'};setInterval(tick,120);
 </script></body></html>
